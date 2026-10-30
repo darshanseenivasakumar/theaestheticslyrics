@@ -91,6 +91,30 @@ describe('LyricsService.get', () => {
     expect(s.client.find).toHaveBeenCalledTimes(1)
   })
 
+  it('logs the sanitized title and artist before the external fetch', async () => {
+    // The players' noise this lookup feeds on: the same track arrives as
+    // "Paper Lanterns (Remastered 2011) [Live] feat. Extra Voice" from the media session.
+    const noisy: TrackQuery = {
+      title: 'Paper Lanterns (Remastered 2011) [Live] feat. Extra Voice',
+      artist: 'Lantern Test Band feat. Other Voice',
+      album: 'Fixtures',
+      durationMs: 32_000
+    }
+    const s = setup(async () => ({ status: 'not-found' }))
+    const events: string[] = []
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation((line: string) => events.push(line))
+    s.client.find.mockImplementation(async () => {
+      events.push('fetch')
+      return { status: 'not-found' }
+    })
+    try {
+      expect(await s.service.get(noisy)).toMatchObject({ status: 'not-found' })
+    } finally {
+      consoleSpy.mockRestore()
+    }
+    expect(events).toEqual(['lyrics: requesting title "Paper Lanterns" artist "Lantern Test Band"', 'fetch'])
+  })
+
   it('remembers not-found without asking again', async () => {
     const s = setup(async () => ({ status: 'not-found' }))
     expect((await s.service.get(query)).status).toBe('not-found')

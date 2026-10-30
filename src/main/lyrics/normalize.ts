@@ -11,7 +11,7 @@ export function normalizeForMatch(s: string): string {
 }
 
 const FEATURING = /\s*[([]\s*(?:feat\.?|ft\.?|featuring|with)\s[^)\]]*[)\]]/gi
-const NOISE_BRACKET = /\s*[([][^)\]]*\b(?:official|video|audio|lyrics?|visualizer|explicit|clean|remaster(?:ed)?)\b[^)\]]*[)\]]/gi
+const NOISE_BRACKET = /\s*[([][^)\]]*\b(?:official|video|audio|lyrics?|visualizer|explicit|clean|remaster(?:ed)?|live)\b[^)\]]*[)\]]/gi
 const NOISE_SUFFIX =
   /\s+[-–—]\s+[^-–—]*\b(?:remaster(?:ed)?|edit|version|mix|mono|stereo|live|acoustic|demo|single|radio|bonus|deluxe|anniversary|explicit|clean|from)\b.*$/i
 const TRAILING_FEAT = /\s+(?:feat\.?|ft\.?|featuring)\s.*$/i

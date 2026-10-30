@@ -21,11 +21,15 @@ describe('cleanTitle', () => {
     expect(cleanTitle('Song (Official Music Video)')).toBe('Song')
     expect(cleanTitle('Song (with Friend)')).toBe('Song')
     expect(cleanTitle('Song - Radio Edit')).toBe('Song')
+    expect(cleanTitle('Song (Live)')).toBe('Song')
+    expect(cleanTitle('Song [Live Version]')).toBe('Song')
+    expect(cleanTitle('Song (Live from Paris)')).toBe('Song')
   })
 
   it('leaves meaningful titles alone', () => {
     expect(cleanTitle('Night (Part 2)')).toBe('Night (Part 2)')
     expect(cleanTitle('Hold On')).toBe('Hold On')
+    expect(cleanTitle('Stay Live')).toBe('Stay Live')
   })
 })
 

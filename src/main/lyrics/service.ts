@@ -7,6 +7,7 @@ import { parseLyricsfile } from './lyricsfile'
 import type { LrclibRecord, TrackQuery } from './match'
 import type { MusixmatchProvider, MusixmatchResult } from './musixmatch'
 import type { NeteaseClient, NeteaseResult } from './netease'
+import { cleanTitle, primaryArtist } from './normalize'
 import { richsyncToTimedLyrics } from './richsync'
 import { buildTimedLyrics } from './word-timing'
 import { parseYrc } from './yrc'
@@ -62,6 +63,15 @@ export class LyricsService {
   async get(q: TrackQuery): Promise<LyricsResult> {
     const local = await this.fromLocal(q)
     if (local) return local
+
+    // Data handoff from Kodama: app-controller.lookup() passes the raw SMTC payload here as a
+    // TrackQuery (title/artist straight from the media session), and every external provider
+    // below receives exactly what this report prints — cleanTitle/primaryArtist are the same
+    // deterministic functions musixmatch.ts, lrclib.ts and netease.ts run on these fields when
+    // building each request, so "Remastered"/"feat."/"Live" noise never reaches a lyrics API.
+    const sanitizedTitle: string = cleanTitle(q.title)
+    const sanitizedArtist: string = primaryArtist(q.artist)
+    console.log(`lyrics: requesting title "${sanitizedTitle}" artist "${sanitizedArtist}"`)
 
     // The has-key / has-Payload checks live inside the provider; missing or rejected is never
     // an error to surface — the song simply continues on the usual local/cache/network chain.
