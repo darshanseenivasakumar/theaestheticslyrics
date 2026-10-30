@@ -1,0 +1,43 @@
+{
+  "message": {
+    "header": {
+      "status_code": 200,
+      "execute_time": 0.113,
+      "available": 2
+    },
+    "body": {
+      "richsync": {
+        "richsync_id": 8991411,
+        "track_id": 63203636,
+        "sync_type": "richsync",
+        "provider": "Musixmatch",
+        "updated_at": "2026-06-14T09:13:19+0000",
+        "richsync_body": [
+          {
+            "ts": 0.5,
+            "te": 4.2,
+            "x": 0,
+            "l": "Paper lanterns drifting",
+            "w": [
+              { "w": "Paper ", "o": 0, "ts": 0.5, "te": 1.3, "x": -990 },
+              { "w": "lanterns ", "o": 0, "ts": 1.3, "te": 2.4, "x": 1450 },
+              { "w": "drifting", "o": 0, "ts": 2.4, "te": 4.2, "x": -990 }
+            ]
+          },
+          {
+            "ts": 4.9,
+            "te": 8.0,
+            "x": 0,
+            "l": "Low over the rooftops",
+            "w": [
+              { "w": "Low ", "o": 0, "ts": 4.9, "te": 5.6, "x": -620 },
+              { "w": "over ", "o": 0, "ts": 5.6, "te": 6.3, "x": 1180 },
+              { "w": "the ", "o": 0, "ts": 6.3, "te": 6.7, "x": -350 },
+              { "w": "rooftops", "o": 0, "ts": 6.7, "te": 8.0, "x": 650 }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "message": {
+    "header": {
+      "status_code": 401,
+      "execute_time": 0.002,
+      "hint": "The API key provided is invalid. Please check your account settings."
+    }
+  }
+}

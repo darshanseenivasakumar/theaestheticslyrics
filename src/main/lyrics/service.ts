@@ -5,14 +5,16 @@ import { parseLrc } from './lrc'
 import type { LrclibClient } from './lrclib'
 import { parseLyricsfile } from './lyricsfile'
 import type { LrclibRecord, TrackQuery } from './match'
+import type { MusixmatchProvider, MusixmatchResult } from './musixmatch'
 import type { NeteaseClient, NeteaseResult } from './netease'
+import { richsyncToTimedLyrics } from './richsync'
 import { buildTimedLyrics } from './word-timing'
 import { parseYrc } from './yrc'
 
 export interface LyricsResult {
   status: 'found' | 'not-found' | 'instrumental' | 'error'
   lyrics: TimedLyrics | null
-  source?: 'local' | 'cache' | 'lrclib' | 'netease'
+  source?: 'local' | 'cache' | 'lrclib' | 'netease' | 'musixmatch'
 }
 
 const durationOrUndefined = (ms: number): number | undefined => (ms > 0 ? ms : undefined)
@@ -39,14 +41,16 @@ export interface LyricsServiceDeps {
   client: LrclibClient
   log: (message: string) => void
   now?: () => number
+  /** Optional Musixmatch richsync provider, the first source asked outside local files. */
+  primary?: { client: Pick<MusixmatchProvider, 'find'> }
   /** Optional source of real per-word timing (NetEase), consulted alongside LRCLIB. */
   wordLevel?: { client: Pick<NeteaseClient, 'find'>; enabled: () => boolean }
 }
 
 /**
- * Local `.lrc` → disk cache → network. On the network, LRCLIB (line timing) and NetEase
- * (word timing, when enabled) are asked in parallel and real word timing wins.
- * Errors are never cached, so the next play retries.
+ * Local `.lrc` → Musixmatch richsync (when configured in secrets.ts) → disk cache → network.
+ * On the network, LRCLIB (line timing) and NetEase (word timing, when enabled) are asked in
+ * parallel and real word timing wins. Errors are never cached, so the next play retries.
  */
 export class LyricsService {
   private readonly now: () => number
@@ -58,6 +62,11 @@ export class LyricsService {
   async get(q: TrackQuery): Promise<LyricsResult> {
     const local = await this.fromLocal(q)
     if (local) return local
+
+    // The has-key / has-Payload checks live inside the provider; missing or rejected is never
+    // an error to surface — the song simply continues on the usual local/cache/network chain.
+    const musixmatch = this.deps.primary ? await this.fromMusixmatch(q) : null
+    if (musixmatch) return musixmatch
 
     const useWords = this.deps.wordLevel?.enabled() ?? false
     const key = cacheKey(q)
@@ -104,6 +113,30 @@ export class LyricsService {
 
     await this.save(key, entry)
     return this.fromEntry(entry, q, 'lrclib', useWords)
+  }
+
+  /**
+   * Musixmatch richsync: the only source whose word timing covers the song exactly as the
+   * publisher cut it, so it jumps the cache. Missing key, refusals, empty payloads — any of
+   * it just hands the song to the fallback chain; nothing here throws outward.
+   */
+  private async fromMusixmatch(q: TrackQuery): Promise<LyricsResult | null> {
+    let found: MusixmatchResult
+    try {
+      found = await this.deps.primary!.client.find(q)
+    } catch (err) {
+      this.deps.log(`lyrics: musixmatch failed (${String(err)})`)
+      return null
+    }
+    if (found.status === 'error') this.deps.log(`lyrics: musixmatch unavailable (${found.message})`)
+    if (found.status !== 'found') return null
+    const lyrics = richsyncToTimedLyrics(found.richsyncBody, q.durationMs)
+    if (!lyrics) {
+      // A service "found" reply needs the payload to round-trip; otherwise just fall through.
+      this.deps.log('lyrics: musixmatch payload unusable')
+      return null
+    }
+    return { status: 'found', lyrics, source: 'musixmatch' }
   }
 
   private async findWords(q: TrackQuery): Promise<NeteaseResult> {

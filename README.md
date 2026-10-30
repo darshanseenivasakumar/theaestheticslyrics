@@ -9,7 +9,7 @@
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-ca415e"></a>
 </p>
 
-**theaestheticslyrics** lights up the lyrics of the song you're playing one word at a time, right as each word is sung. It sits in the Windows system tray and follows Spotify or Apple Music. The lyrics show on a full-screen lyrics screen when you step away, or float over your desktop while you work.
+**theaestheticslyrics** lights up the lyrics of the song you're playing one word at a time, right as each word is sung. It sits in the Windows system tray and follows Spotify, Apple Music or the [Kodama](https://github.com/KiyoshiTheDevil/Kodama) YouTube Music client. The lyrics show on a full-screen lyrics screen when you step away, or float over your desktop while you work.
 
 It's a Windows take on [Verci](https://verci.xyz), a Mac app. It's free and open source, and you don't need an account or an API key.
 
@@ -38,7 +38,7 @@ It's a Windows take on [Verci](https://verci.xyz), a Mac app. It's free and open
 
 ## How to use it
 
-1. Play a song in **Spotify** or **Apple Music**.
+1. Play a song in **Spotify**, **Apple Music** or **Kodama**.
 2. Press **Ctrl+Alt+L**. The lyrics fill the screen. Press **Esc** to close them.
 3. Every setting is in the tray icon (the pink **a**). On Windows 11 it may be hidden under the **^** arrow; drag it onto the taskbar to keep it visible.
 
@@ -66,11 +66,25 @@ Pick one in tray → **Show Lyrics**.
 | **Style** | Ship, Fisheye, Fisheye Visual or Visual. |
 | **Timing** | Shifts the words earlier or later. Bluetooth headphones usually need *0.25–0.5 s Later*. |
 | **Precise Word Timing (NetEase)** | Uses real per-word timing when NetEase has the song (see below). |
-| **Players** | *Spotify and Apple Music*, or *All Media Apps* (browsers, YouTube Music and anything else that shows in Windows' media controls). |
+| **Players** | *Spotify and Apple Music* (the default), *Kodama* only, or *All Media Apps* (browsers and anything else that shows in Windows' media controls). |
 | **Open Lyrics Folder** | Opens the folder for your own `.lrc` files. |
 | **Start with Windows** | Starts the app quietly in the tray when you sign in. |
 
 While a song with lyrics plays, your display stays awake. When the music stops, Windows' normal sleep and lock timers take over again.
+
+Built-in sources try [LRCLIB](https://lrclib.net) first and [NetEase](https://music.163.com) for word timing. Developers who paste their own [Musixmatch](https://developer.musixmatch.com) key into `src/main/secrets.ts` (copy the included `secrets.example.ts`; the file stays uncommitted) get Musixmatch's word-by-word timing too — with no key, everything still works through the usual fallbacks.
+
+### Following Kodama (YouTube Music)
+
+[Kodama](https://github.com/KiyoshiTheDevil/Kodama) is a free desktop YouTube Music client for Windows. theaestheticslyrics follows it through Windows' own media controls — the same system Spotify and Apple Music use — so titles, artists, album art and progress arrive on their own; no plugin is needed in either app.
+
+- Pick tray → **Players → Kodama** to follow only Kodama. Browsers and other apps stop competing for the lyrics, even with a paused YouTube session in the background.
+- **All Media Apps** follows Kodama too, but it prefers whatever Windows considers the current session, so a second playing app can take over the lyrics. Choose *Kodama* when you want it to be the one and only source.
+
+Two things to know, both coming from how Kodama updates Windows' media timeline (about every 15 seconds):
+
+- After you seek inside Kodama, the lyrics catch up to the new spot at its next update — up to ~15 s. Pausing, resuming and changing tracks appear right away (within a second or so).
+- The album art and the exact song length can lag a few seconds at first, while Windows fetches the YouTube thumbnail and Kodama learns the real duration. Lyrics matching adapts while the length is unknown.
 
 ## Where the lyrics come from
 
@@ -100,6 +114,9 @@ Lyrics you've played before load instantly from a local cache. Songs with no syn
 | Ctrl+Alt+L does nothing | Another app already uses that shortcut, and the tray then shows no shortcut next to the lyrics-screen item. Use the tray item instead. |
 | Touching anything after Ctrl+Alt+L shows the Windows sign-in screen | **Lock Windows When I Come Back** is on. Turn it off in the tray. |
 | **Start with Windows** is greyed out | It only works in the released app, not when running from source. If you move the app folder, turn it off and on again. |
+| Kodama plays but no lyrics follow | Choose tray → **Players → Kodama**. If it still doesn't follow, open the log: every app id Windows reports is written as a `media session: …` line. If your build of Kodama reports an unexpected id (a fork or a renamed exe), start the app with `THEAESTHETICSLYRICS_KODAMA_ID` set to a comma-separated list of case-insensitive name fragments to trust (e.g. `set THEAESTHETICSLYRICS_KODAMA_ID=music-helper`), and it will follow those sessions too. |
+| The words jump back after seeking inside Kodama | Kodama refreshes Windows' media timeline about every 15 seconds and doesn't announce seeks separately, so the lyrics move to the new spot only at its next update. This is Kodama's own behaviour; nothing is wrong with the app. |
+| Album art is missing or arrives late | Windows fetches the player's artwork in its own time (YouTube thumbnails for Kodama can take a few seconds). The app keeps checking for about 10 seconds and also lets you pick your own colours instead. |
 
 - **Log:** `%APPDATA%\theaestheticslyrics\logs\theaestheticslyrics.log`
 - **Settings:** `%APPDATA%\theaestheticslyrics\settings.json`
@@ -171,7 +188,7 @@ Issues and pull requests are welcome. Please run `npm run typecheck` and `npm te
 - Built with [Electron](https://www.electronjs.org), [electron-vite](https://electron-vite.org) and TypeScript.
 - Third-party licenses are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-theaestheticslyrics is an independent project. It isn't affiliated with or endorsed by Verci, Spotify, Apple, NetEase or LRCLIB. Lyrics belong to their songwriters and publishers, and no lyrics are stored in this repository.
+theaestheticslyrics is an independent project. It isn't affiliated with or endorsed by Verci, Spotify, Apple, NetEase, LRCLIB or Kodama. Lyrics belong to their songwriters and publishers, and no lyrics are stored in this repository.
 
 ## License
 

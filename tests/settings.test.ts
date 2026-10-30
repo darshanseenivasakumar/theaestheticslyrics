@@ -49,6 +49,7 @@ describe('sanitizeSettings', () => {
       autoSync: true,
       offsetMs: -250.4,
       idleMinutes: 0,
+      source: 'all',
       allPlayers: true,
       launchAtLogin: true,
       welcomed: true,
@@ -61,9 +62,42 @@ describe('sanitizeSettings', () => {
       autoSync: true,
       offsetMs: -250,
       idleMinutes: 0,
+      source: 'all',
       allPlayers: true,
       launchAtLogin: true,
       welcomed: true
+    })
+  })
+
+  describe('player source', () => {
+    it('defaults to Spotify and Apple Music', () => {
+      expect(DEFAULT_SETTINGS.source).toBe('default')
+      expect(sanitizeSettings(undefined).source).toBe('default')
+      expect(sanitizeSettings(undefined).allPlayers).toBe(false)
+    })
+
+    it('keeps a valid source and repairs an invalid one', () => {
+      expect(sanitizeSettings({ source: 'kodama' }).source).toBe('kodama')
+      expect(sanitizeSettings({ source: 'kodama' }).allPlayers).toBe(false)
+      expect(sanitizeSettings({ source: 'curry' }).source).toBe('default')
+      expect(sanitizeSettings({ source: 2 }).source).toBe('default')
+    })
+
+    it('migrates the old All Media Apps flag to the "all" source', () => {
+      expect(sanitizeSettings({ allPlayers: true }).source).toBe('all')
+      expect(sanitizeSettings({ allPlayers: true }).allPlayers).toBe(true)
+      expect(sanitizeSettings({ allPlayers: false }).source).toBe('default')
+      expect(sanitizeSettings({ }).source).toBe('default')
+    })
+
+    it('lets an explicit source win over the legacy flag', () => {
+      expect(sanitizeSettings({ source: 'kodama', allPlayers: true }).source).toBe('kodama')
+      expect(sanitizeSettings({ source: 'kodama', allPlayers: true }).allPlayers).toBe(false)
+    })
+
+    it('derives allPlayers from the source in the other direction', () => {
+      expect(sanitizeSettings({ source: 'all' }).allPlayers).toBe(true)
+      expect(sanitizeSettings({ source: 'default' }).allPlayers).toBe(false)
     })
   })
 })
@@ -75,6 +109,29 @@ describe('SettingsStore', () => {
     const reopened = new SettingsStore(file)
     expect(reopened.get().style).toBe('visual')
     expect(JSON.parse(readFileSync(file, 'utf8')).offsetMs).toBe(-250)
+  })
+
+  it('persists a saved Kodama player choice across restarts', () => {
+    const file = tempFile()
+    new SettingsStore(file).update({ source: 'kodama' })
+    const reopened = new SettingsStore(file)
+    expect(reopened.get().source).toBe('kodama')
+    expect(reopened.get().allPlayers).toBe(false)
+    expect(JSON.parse(readFileSync(file, 'utf8')).source).toBe('kodama')
+  })
+
+  it('an old All Media Apps settings file opens as "all"', () => {
+    const file = tempFile()
+    const legacy = { ...DEFAULT_SETTINGS, source: undefined, allPlayers: true } as Record<string, unknown>
+    delete legacy.source
+    writeFileSync(file, JSON.stringify(legacy), 'utf8')
+    expect(new SettingsStore(file).get().source).toBe('all')
+  })
+
+  it('an old Spotify-only settings file opens as "default"', () => {
+    const file = tempFile()
+    writeFileSync(file, JSON.stringify({ style: 'ship' }), 'utf8')
+    expect(new SettingsStore(file).get().source).toBe('default')
   })
 
   it('merges partial colour updates', () => {

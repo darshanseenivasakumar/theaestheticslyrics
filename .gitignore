@@ -5,3 +5,5 @@ snapshots/
 *.log
 .remember/
 .claude/
+# Paste your Musixmatch key into src/main/secrets.ts locally; never commit it.
+src/main/secrets.ts

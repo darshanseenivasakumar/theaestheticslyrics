@@ -1,6 +1,6 @@
 import { Menu, Tray, nativeImage, type MenuItemConstructorOptions, type NativeImage } from 'electron'
 import { STYLE_IDS, STYLE_LABELS, type ColorRole, type LyricsStatus, type Palette, type ShowOn, type StyleId, type TrackInfo } from '@shared/types'
-import type { IdleMinutes, Settings } from '../settings'
+import type { IdleMinutes, PlayerSource, Settings } from '../settings'
 import { swatchBitmap } from './swatch'
 
 export interface TrayModel {
@@ -26,7 +26,7 @@ export interface TrayActions {
   setOffset(ms: number): void
   setWordLevel(on: boolean): void
   setIdle(minutes: IdleMinutes): void
-  setAllPlayers(on: boolean): void
+  setSource(source: PlayerSource): void
   openLyricsFolder(): void
   setLaunchAtLogin(on: boolean): void
   quit(): void
@@ -192,8 +192,9 @@ export class TrayMenu {
       {
         label: 'Players',
         submenu: [
-          radio('Spotify and Apple Music', !s.allPlayers, () => a.setAllPlayers(false)),
-          radio('All Media Apps (browsers too)', s.allPlayers, () => a.setAllPlayers(true))
+          radio('Spotify and Apple Music', s.source === 'default', () => a.setSource('default')),
+          radio('Kodama (YouTube Music)', s.source === 'kodama', () => a.setSource('kodama')),
+          radio('All Media Apps (browsers too)', s.source === 'all', () => a.setSource('all'))
         ]
       },
       { type: 'separator' },

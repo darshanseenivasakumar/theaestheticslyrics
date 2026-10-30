@@ -7,8 +7,10 @@ import type { Log } from './logger'
 import { LyricsCache } from './lyrics/cache'
 import { LocalLyrics } from './lyrics/local'
 import { LrclibClient } from './lyrics/lrclib'
+import { MusixmatchProvider } from './lyrics/musixmatch'
 import { NeteaseClient } from './lyrics/netease'
 import { LyricsService, type LyricsResult } from './lyrics/service'
+import { MUSIXMATCH_API_KEY } from './secrets'
 import { MediaWatcher, type ArtworkEvent } from './media/watcher'
 import { extractPalette, paletteFromColors } from './palette/extract'
 import type { AppPaths } from './paths'
@@ -77,6 +79,12 @@ export class AppController {
       local: this.local,
       cache: new LyricsCache(this.paths.cacheDir),
       client: new LrclibClient({ userAgent: `theaestheticslyrics/${app.getVersion()} (${HOMEPAGE})` }),
+      primary: {
+        client: new MusixmatchProvider({
+          apiKey: MUSIXMATCH_API_KEY,
+          userAgent: `theaestheticslyrics/${app.getVersion()}`
+        })
+      },
       log: this.log,
       wordLevel: { client: new NeteaseClient(), enabled: () => this.settings.get().wordLevel }
     })
@@ -103,7 +111,7 @@ export class AppController {
     this.watcher = new MediaWatcher({
       scriptPath: this.paths.bridgeScript,
       log: this.log,
-      allPlayers: () => this.settings.get().allPlayers
+      source: () => this.settings.get().source
     })
     this.watcher.on('track', (t) => this.onTrack(t))
     this.watcher.on('anchor', (a) => this.onAnchor(a))
@@ -216,7 +224,12 @@ export class AppController {
     if (!this.track || art.key !== this.track.key) return
     try {
       const image = nativeImage.createFromBuffer(art.data)
-      if (image.isEmpty()) return
+      if (image.isEmpty()) {
+        // nativeImage decodes PNG and JPEG only; e.g. WebP arrives as an empty image.
+        // A diagnostic here replaces the old silent drop so an art regression is visible.
+        this.log(`palette: album art bytes=${art.data.length} mime=${art.mime || 'unknown'} decoded to an empty image (unsupported format?)`)
+        return
+      }
       const small = image.resize({ width: 64, height: 64, quality: 'good' })
       const { width, height } = small.getSize()
       this.albumPalette = extractPalette(small.toBitmap(), width, height)
@@ -305,7 +318,7 @@ export class AppController {
       setOffset: (offsetMs) => this.settings.update({ offsetMs }),
       setWordLevel: (wordLevel) => this.settings.update({ wordLevel }),
       setIdle: (idleMinutes) => this.settings.update({ idleMinutes }),
-      setAllPlayers: (allPlayers) => this.settings.update({ allPlayers }),
+      setSource: (source) => this.settings.update({ source }),
       openLyricsFolder: () => {
         void this.local.ensureDir().then(() => shell.openPath(this.paths.lyricsDir))
       },
