@@ -76,6 +76,36 @@ interface Draft {
 const isBreak = (line: ParsedLine | undefined): boolean => !!line && !line.text.trim() && !line.words?.length
 
 /**
+ * Publisher drift lets a line's words overlap the next line's start. The renderer indexes
+ * the flattened words with a binary search, so walk the sorted lines and push any word
+ * that would start before the last placed word forward — timings agree within a few
+ * milliseconds when payloads overlap; nothing else about them changes. Mutates `lines`.
+ */
+export function flattenOverlaps(lines: ParsedLine[]): ParsedLine[] {
+  lines.sort((a, b) => a.start - b.start)
+  let floor = 0
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!
+    const start = Math.max(line.start, floor)
+    if (line.words) {
+      let last = start
+      const words = line.words.map((w) => {
+        const wordStart = Math.max(w.start, last)
+        const wordEnd = Math.max(w.end, wordStart)
+        last = wordStart
+        return { text: w.text, start: wordStart, end: wordEnd }
+      })
+      lines[i] = { ...line, start, end: line.end !== undefined ? Math.max(line.end, start) : undefined, words }
+      floor = words[words.length - 1]!.start
+    } else {
+      lines[i] = { ...line, start, end: line.end !== undefined ? Math.max(line.end, start) : undefined }
+      floor = start
+    }
+  }
+  return lines
+}
+
+/**
  * Turns parsed lines into per-word timing. Words keep the source's timing when it has
  * any; otherwise each line's time is shared by syllable weight. Lines whose end is only
  * inferred are capped at the song's own pace so a long instrumental never stretches a word.

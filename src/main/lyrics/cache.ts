@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { makeDir } from '../dirs'
+import type { LyricsProvider } from '../settings'
 import type { LrclibRecord, TrackQuery } from './match'
 import { cleanTitle, normalizeForMatch, primaryArtist } from './normalize'
 
@@ -10,7 +11,13 @@ export interface CacheEntry {
   record?: LrclibRecord
   /** NetEase word-timed lyrics (YRC) for this song, when it has them. */
   yrc?: string
-  /** NetEase has answered for this song (entries without it get checked once). */
+  /** Karalyr payload JSON (word or line timing), served before the LRCLIB record on repeats. */
+  karalyr?: string
+  /** Musixmatch richsync payload JSON, kept only in a Musixmatch-specific cache slot. */
+  musixmatch?: string
+  /** Better Lyrics TTML (syllable timing), served before the LRCLIB record on repeats. */
+  betterlyrics?: string
+  /** The word-timing question is settled for this song (entries without it get checked once). */
   wordChecked?: boolean
   fetchedAt: number
 }
@@ -22,6 +29,15 @@ export function cacheKey(q: TrackQuery): string {
   const durationBucket = q.durationMs > 0 ? Math.round(q.durationMs / 2000) : 0
   const identity = `${normalizeForMatch(primaryArtist(q.artist))}|${normalizeForMatch(cleanTitle(q.title))}|${durationBucket}`
   return createHash('sha1').update(identity).digest('hex')
+}
+
+/**
+ * Explicit provider choices get their own slot. The automatic chain keeps the legacy key so
+ * existing caches stay useful, while one provider's answer can never leak into another.
+ */
+export function providerCacheKey(q: TrackQuery, provider: LyricsProvider): string {
+  const key = cacheKey(q)
+  return provider === 'auto' ? key : `${key}-${provider}`
 }
 
 const isEntry = (v: unknown): v is CacheEntry =>

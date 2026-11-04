@@ -1,12 +1,52 @@
 import type { TrackInfo } from '@shared/types'
 import { splitAppleMusicArtist } from '../lyrics/normalize'
+import type { PlayerSource } from '../settings'
 import { rawKey, type RawSession } from './protocol'
 
 const DEFAULT_APPS = [/spotify/i, /AppleInc\.AppleMusic/i, /itunes/i]
 const APPLE_MUSIC = /AppleInc\.AppleMusic/i
 
-export function isAllowedApp(app: string, allPlayers: boolean): boolean {
-  return allPlayers || DEFAULT_APPS.some((re) => re.test(app))
+/**
+ * Kodama (https://kodama.kiyoshi.dev) is an unpackaged Tauri app that publishes its
+ * YouTube Music playback through the same SMTC timeline as every other player. Windows
+ * reports the session under the app's own identifier — most often the executable path
+ * (`…\kodama.exe`) or its Tauri id (`dev.kodama.music`) — so recognition is a
+ * case-insensitive "kodama" match rather than one literal id.
+ */
+const KODAMA_APP = /kodama/i
+/** Extra trusted patterns, for users whose Kodama build reports an unexpected id. */
+const KODAMA_OVERRIDE_ENV = 'THEAESTHETICSLYRICS_KODAMA_ID'
+
+function kodamaPatterns(): RegExp[] {
+  const patterns = [KODAMA_APP]
+  const override = process.env[KODAMA_OVERRIDE_ENV]
+  if (override) {
+    for (const part of override.split(/[,;]/)) {
+      const trimmed = part.trim()
+      if (!trimmed) continue
+      try {
+        patterns.push(new RegExp(trimmed, 'i'))
+      } catch {
+        // An unparseable pattern must never break selection; skip it.
+      }
+    }
+  }
+  return patterns
+}
+
+export function isKodamaApp(app: string): boolean {
+  return kodamaPatterns().some((re) => re.test(app))
+}
+
+export function isAllowedApp(app: string, source: PlayerSource): boolean {
+  switch (source) {
+    case 'kodama':
+      return isKodamaApp(app)
+    case 'all':
+      return true
+    default:
+      return DEFAULT_APPS.some((re) => re.test(app))
+  }
 }
 
 /**
@@ -16,9 +56,9 @@ export function isAllowedApp(app: string, allPlayers: boolean): boolean {
 export function selectSession(
   snapshot: { current: string | null; sessions: RawSession[] },
   prevKey: string | null,
-  allPlayers: boolean
+  source: PlayerSource
 ): RawSession | null {
-  const allowed = snapshot.sessions.filter((s) => isAllowedApp(s.app, allPlayers))
+  const allowed = snapshot.sessions.filter((s) => isAllowedApp(s.app, source))
   if (!allowed.length) return null
 
   const isCurrent = (s: RawSession): boolean => snapshot.current !== null && s.app === snapshot.current

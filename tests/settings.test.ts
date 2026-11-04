@@ -19,6 +19,18 @@ describe('sanitizeSettings', () => {
     expect(sanitizeSettings({ wordLevel: 1 }).wordLevel).toBe(true)
   })
 
+  it('uses the automatic lyrics chain by default', () => {
+    expect(DEFAULT_SETTINGS.lyricsProvider).toBe('auto')
+    expect(sanitizeSettings({}).lyricsProvider).toBe('auto')
+  })
+
+  it('keeps a valid lyrics provider and repairs an invalid one', () => {
+    expect(sanitizeSettings({ lyricsProvider: 'karalyr' }).lyricsProvider).toBe('karalyr')
+    expect(sanitizeSettings({ lyricsProvider: 'betterlyrics' }).lyricsProvider).toBe('betterlyrics')
+    expect(sanitizeSettings({ lyricsProvider: 'spotify' }).lyricsProvider).toBe('auto')
+    expect(sanitizeSettings({ lyricsProvider: 2 }).lyricsProvider).toBe('auto')
+  })
+
   it('does not lock Windows from the lyrics screen unless asked to', () => {
     expect(DEFAULT_SETTINGS.lockOnReturn).toBe(false)
     expect(sanitizeSettings({ lockOnReturn: 'yes' }).lockOnReturn).toBe(false)
@@ -30,7 +42,8 @@ describe('sanitizeSettings', () => {
       offsetMs: 99999,
       colors: { lyric: 'red', highlight: '#00FF00' },
       idleMinutes: 3,
-      showOn: 'always'
+      showOn: 'always',
+      lyricsProvider: 'not-a-provider'
     })
     expect(s.style).toBe('ship')
     expect(s.offsetMs).toBe(1000)
@@ -39,6 +52,7 @@ describe('sanitizeSettings', () => {
     expect(s.colors.secondary).toBe(DEFAULT_SETTINGS.colors.secondary)
     expect(s.idleMinutes).toBe(2)
     expect(s.showOn).toBe('always')
+    expect(s.lyricsProvider).toBe('auto')
   })
 
   it('keeps valid values and rounds the offset', () => {
@@ -49,10 +63,12 @@ describe('sanitizeSettings', () => {
       autoSync: true,
       offsetMs: -250.4,
       idleMinutes: 0,
+      source: 'all',
       allPlayers: true,
       launchAtLogin: true,
       welcomed: true,
-      lockOnReturn: true
+      lockOnReturn: true,
+      lyricsProvider: 'netease'
     })
     expect(s).toMatchObject({
       lockOnReturn: true,
@@ -61,9 +77,43 @@ describe('sanitizeSettings', () => {
       autoSync: true,
       offsetMs: -250,
       idleMinutes: 0,
+      source: 'all',
       allPlayers: true,
       launchAtLogin: true,
-      welcomed: true
+      welcomed: true,
+      lyricsProvider: 'netease'
+    })
+  })
+
+  describe('player source', () => {
+    it('defaults to Spotify and Apple Music', () => {
+      expect(DEFAULT_SETTINGS.source).toBe('default')
+      expect(sanitizeSettings(undefined).source).toBe('default')
+      expect(sanitizeSettings(undefined).allPlayers).toBe(false)
+    })
+
+    it('keeps a valid source and repairs an invalid one', () => {
+      expect(sanitizeSettings({ source: 'kodama' }).source).toBe('kodama')
+      expect(sanitizeSettings({ source: 'kodama' }).allPlayers).toBe(false)
+      expect(sanitizeSettings({ source: 'curry' }).source).toBe('default')
+      expect(sanitizeSettings({ source: 2 }).source).toBe('default')
+    })
+
+    it('migrates the old All Media Apps flag to the "all" source', () => {
+      expect(sanitizeSettings({ allPlayers: true }).source).toBe('all')
+      expect(sanitizeSettings({ allPlayers: true }).allPlayers).toBe(true)
+      expect(sanitizeSettings({ allPlayers: false }).source).toBe('default')
+      expect(sanitizeSettings({ }).source).toBe('default')
+    })
+
+    it('lets an explicit source win over the legacy flag', () => {
+      expect(sanitizeSettings({ source: 'kodama', allPlayers: true }).source).toBe('kodama')
+      expect(sanitizeSettings({ source: 'kodama', allPlayers: true }).allPlayers).toBe(false)
+    })
+
+    it('derives allPlayers from the source in the other direction', () => {
+      expect(sanitizeSettings({ source: 'all' }).allPlayers).toBe(true)
+      expect(sanitizeSettings({ source: 'default' }).allPlayers).toBe(false)
     })
   })
 })
@@ -75,6 +125,37 @@ describe('SettingsStore', () => {
     const reopened = new SettingsStore(file)
     expect(reopened.get().style).toBe('visual')
     expect(JSON.parse(readFileSync(file, 'utf8')).offsetMs).toBe(-250)
+  })
+
+  it('persists a saved Kodama player choice across restarts', () => {
+    const file = tempFile()
+    new SettingsStore(file).update({ source: 'kodama' })
+    const reopened = new SettingsStore(file)
+    expect(reopened.get().source).toBe('kodama')
+    expect(reopened.get().allPlayers).toBe(false)
+    expect(JSON.parse(readFileSync(file, 'utf8')).source).toBe('kodama')
+  })
+
+  it('persists a saved lyrics provider across restarts', () => {
+    const file = tempFile()
+    new SettingsStore(file).update({ lyricsProvider: 'karalyr' })
+    const reopened = new SettingsStore(file)
+    expect(reopened.get().lyricsProvider).toBe('karalyr')
+    expect(JSON.parse(readFileSync(file, 'utf8')).lyricsProvider).toBe('karalyr')
+  })
+
+  it('an old All Media Apps settings file opens as "all"', () => {
+    const file = tempFile()
+    const legacy = { ...DEFAULT_SETTINGS, source: undefined, allPlayers: true } as Record<string, unknown>
+    delete legacy.source
+    writeFileSync(file, JSON.stringify(legacy), 'utf8')
+    expect(new SettingsStore(file).get().source).toBe('all')
+  })
+
+  it('an old Spotify-only settings file opens as "default"', () => {
+    const file = tempFile()
+    writeFileSync(file, JSON.stringify({ style: 'ship' }), 'utf8')
+    expect(new SettingsStore(file).get().source).toBe('default')
   })
 
   it('merges partial colour updates', () => {

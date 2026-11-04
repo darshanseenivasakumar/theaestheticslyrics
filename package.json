@@ -1,7 +1,7 @@
 {
   "name": "theaestheticslyrics",
   "productName": "theaestheticslyrics",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "Word-by-word synced lyrics for Spotify and Apple Music on Windows, on a full-screen lyrics screen or an always-on overlay.",
   "private": true,
   "main": "./out/main/index.js",
@@ -26,10 +26,10 @@
     "lock-screen"
   ],
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/ensure-secrets.mjs && electron-vite dev",
     "start": "electron-vite preview",
     "build": "npm run typecheck && electron-vite build",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "node scripts/ensure-secrets.mjs && npm run typecheck:node && npm run typecheck:web",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "test": "vitest run",
@@ -38,7 +38,8 @@
     "snapshot": "electron-vite build && electron . --snapshot=snapshots",
     "package": "npm run build && node scripts/package-win.mjs",
     "fake-player": "electron scripts/fake-player/main.cjs",
-    "check:lrclib": "vitest run --config vitest.live.config.ts"
+    "check:lrclib": "vitest run --config vitest.live.config.ts",
+    "lyrics:server": "node server/server.mjs"
   },
   "devDependencies": {
     "@electron/packager": "20.3.0",

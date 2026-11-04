@@ -164,6 +164,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 The app looks lyrics up while it runs. No lyrics are included in this repository or in the release.
 
+- [Karalyr](https://karalyr.com), a free, open karaoke lyrics database with word-level timing.
+- [Better Lyrics](https://docs.betterlyrics.org), a cache-first lyrics API with syllable-level timing.
 - [LRCLIB](https://lrclib.net), a free, community-run lyrics database.
 - NetEase Cloud Music (music.163.com), through its public but undocumented web API, for per-word
   timing. It can be turned off in the tray menu.

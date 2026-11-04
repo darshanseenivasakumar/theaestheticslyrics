@@ -1,0 +1,102 @@
+{
+  "message": {
+    "header": {
+      "status_code": 200,
+      "execute_time": 0.113,
+      "available": 2
+    },
+    "body": {
+      "richsync": {
+        "richsync_id": 8991411,
+        "track_id": 63203636,
+        "sync_type": "richsync",
+        "provider": "Musixmatch",
+        "updated_at": "2026-06-14T09:13:19+0000",
+        "richsync_body": [
+          {
+            "ts": 0.5,
+            "te": 4.2,
+            "x": 0,
+            "l": "Paper lanterns drifting",
+            "w": [
+              { "w": "Paper ", "o": 0, "ts": 0.5, "te": 1.3, "x": -990 },
+              { "w": "lanterns ", "o": 0, "ts": 1.3, "te": 2.4, "x": 1450 },
+              { "w": "drifting", "o": 0, "ts": 2.4, "te": 4.2, "x": -990 }
+            ]
+          },
+          {
+            "ts": 4.9,
+            "te": 8.0,
+            "x": 0,
+            "l": "Low over the rooftops",
+            "w": [
+              { "w": "Low ", "o": 0, "ts": 4.9, "te": 5.6, "x": -620 },
+              { "w": "over ", "o": 0, "ts": 5.6, "te": 6.3, "x": 1180 },
+              { "w": "the ", "o": 0, "ts": 6.3, "te": 6.7, "x": -350 },
+              { "w": "rooftops", "o": 0, "ts": 6.7, "te": 8.0, "x": 650 }
+            ]
+          },
+          {
+            "ts": 9.4,
+            "te": 13.1,
+            "x": 0,
+            "l": "Every window keeps",
+            "w": [
+              { "w": "Every ", "o": 0, "ts": 9.4, "te": 10.2, "x": -810 },
+              { "w": "window ", "o": 0, "ts": 10.2, "te": 11.3, "x": 990 },
+              { "w": "keeps", "o": 0, "ts": 11.3, "te": 13.1, "x": -450 }
+            ]
+          },
+          {
+            "ts": 14.1,
+            "te": 17.9,
+            "x": 0,
+            "l": "Hold the light",
+            "w": [
+              { "w": "Hold ", "o": 0, "ts": 14.1, "te": 15.2, "x": -700 },
+              { "w": "the ", "o": 0, "ts": 15.2, "te": 15.7, "x": 240 },
+              { "w": "light", "o": 0, "ts": 15.7, "te": 17.9, "x": -1240 }
+            ]
+          },
+          {
+            "ts": 19.2,
+            "te": 22.6,
+            "x": 0,
+            "l": "Till the lanterns are gone",
+            "w": [
+              { "w": "Till ", "o": 0, "ts": 19.2, "te": 19.9, "x": -560 },
+              { "w": "the ", "o": 0, "ts": 19.9, "te": 20.4, "x": 300 },
+              { "w": "lanterns ", "o": 0, "ts": 20.4, "te": 21.4, "x": 880 },
+              { "w": "are ", "o": 0, "ts": 21.4, "te": 21.9, "x": -290 },
+              { "w": "gone", "o": 0, "ts": 21.9, "te": 22.6, "x": -1340 }
+            ]
+          },
+          {
+            "ts": 23.7,
+            "te": 27.4,
+            "x": 0,
+            "l": "Every ember holds",
+            "w": [
+              { "w": "Every ", "o": 0, "ts": 23.7, "te": 24.5, "x": -810 },
+              { "w": "ember ", "o": 0, "ts": 24.5, "te": 25.6, "x": 640 },
+              { "w": "holds", "o": 0, "ts": 25.6, "te": 27.4, "x": -450 }
+            ]
+          },
+          {
+            "ts": 28.3,
+            "te": 31.9,
+            "x": 0,
+            "l": "The light through the glass",
+            "w": [
+              { "w": "The ", "o": 0, "ts": 28.3, "te": 28.9, "x": -700 },
+              { "w": "light ", "o": 0, "ts": 28.9, "te": 29.6, "x": 350 },
+              { "w": "through ", "o": 0, "ts": 29.6, "te": 30.4, "x": -980 },
+              { "w": "the ", "o": 0, "ts": 30.4, "te": 30.9, "x": 240 },
+              { "w": "glass", "o": 0, "ts": 30.9, "te": 31.9, "x": -1240 }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

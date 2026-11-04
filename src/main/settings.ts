@@ -6,6 +6,19 @@ import { makeDirSync } from './dirs'
 
 export type IdleMinutes = 0 | 1 | 2 | 5
 
+/** Which Windows media sessions to follow: the defaults, Kodama only, or everything. */
+export type PlayerSource = 'default' | 'kodama' | 'all'
+
+/** Which source may answer a lookup; `auto` keeps the built-in fallback chain. */
+export type LyricsProvider =
+  | 'auto'
+  | 'local'
+  | 'musixmatch'
+  | 'karalyr'
+  | 'betterlyrics'
+  | 'lrclib'
+  | 'netease'
+
 export interface Settings {
   version: 1
   style: StyleId
@@ -18,7 +31,9 @@ export interface Settings {
   offsetMs: number
   /** Minutes of no input before the lyrics screen opens during playback; 0 = off. */
   idleMinutes: IdleMinutes
-  /** Follow every media app, not just Spotify and Apple Music. */
+  /** Which player to follow (Spotify and Apple Music, Kodama, or every media app). */
+  source: PlayerSource
+  /** Derived from `source` for older versions that only knew "All Media Apps". */
   allPlayers: boolean
   launchAtLogin: boolean
   /** The first-run "theaestheticslyrics is running" notice has been shown. */
@@ -30,10 +45,22 @@ export interface Settings {
   lockOnReturn: boolean
   /** Also ask NetEase (unofficial) for real per-word timing; LRCLIB stays the fallback. */
   wordLevel: boolean
+  /** Automatic uses the whole chain; an explicit choice uses only that source. */
+  lyricsProvider: LyricsProvider
 }
 
 export const IDLE_CHOICES: readonly IdleMinutes[] = [0, 1, 2, 5]
 export const OFFSET_LIMIT_MS = 1000
+export const PLAYER_SOURCES: readonly PlayerSource[] = ['default', 'kodama', 'all']
+export const LYRICS_PROVIDERS: readonly LyricsProvider[] = [
+  'auto',
+  'local',
+  'musixmatch',
+  'karalyr',
+  'betterlyrics',
+  'lrclib',
+  'netease'
+]
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   version: 1,
@@ -44,11 +71,13 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   colors: Object.freeze({ ...DEFAULT_COLORS }),
   offsetMs: 0,
   idleMinutes: 2,
+  source: 'default',
   allPlayers: false,
   launchAtLogin: false,
   welcomed: false,
   lockOnReturn: false,
-  wordLevel: true
+  wordLevel: true,
+  lyricsProvider: 'auto'
 }) as Readonly<Settings>
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -56,11 +85,20 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 const pickColor = (v: unknown, fallback: string): string =>
   typeof v === 'string' && HEX_COLOR.test(v) ? v.toLowerCase() : fallback
 
-/** Validates every field independently, so one bad value never resets the rest. */
+/**
+ * Validates every field independently, so one bad value never resets the rest.
+ * The player choice reads the new `source` field; a settings file from an older
+ * version only has the `allPlayers` flag, which becomes the "all" source.
+ */
 export function sanitizeSettings(raw: unknown): Settings {
   const r = isRecord(raw) ? raw : {}
   const colors = isRecord(r.colors) ? r.colors : {}
   const offset = typeof r.offsetMs === 'number' && Number.isFinite(r.offsetMs) ? Math.round(r.offsetMs) : 0
+  const source: PlayerSource = PLAYER_SOURCES.includes(r.source as PlayerSource)
+    ? (r.source as PlayerSource)
+    : r.allPlayers === true
+      ? 'all'
+      : DEFAULT_SETTINGS.source
 
   return {
     version: 1,
@@ -77,11 +115,15 @@ export function sanitizeSettings(raw: unknown): Settings {
     idleMinutes: IDLE_CHOICES.includes(r.idleMinutes as IdleMinutes)
       ? (r.idleMinutes as IdleMinutes)
       : DEFAULT_SETTINGS.idleMinutes,
-    allPlayers: typeof r.allPlayers === 'boolean' ? r.allPlayers : DEFAULT_SETTINGS.allPlayers,
+    source,
+    allPlayers: source === 'all',
     launchAtLogin: typeof r.launchAtLogin === 'boolean' ? r.launchAtLogin : DEFAULT_SETTINGS.launchAtLogin,
     welcomed: typeof r.welcomed === 'boolean' ? r.welcomed : DEFAULT_SETTINGS.welcomed,
     lockOnReturn: typeof r.lockOnReturn === 'boolean' ? r.lockOnReturn : DEFAULT_SETTINGS.lockOnReturn,
-    wordLevel: typeof r.wordLevel === 'boolean' ? r.wordLevel : DEFAULT_SETTINGS.wordLevel
+    wordLevel: typeof r.wordLevel === 'boolean' ? r.wordLevel : DEFAULT_SETTINGS.wordLevel,
+    lyricsProvider: LYRICS_PROVIDERS.includes(r.lyricsProvider as LyricsProvider)
+      ? (r.lyricsProvider as LyricsProvider)
+      : DEFAULT_SETTINGS.lyricsProvider
   }
 }
 

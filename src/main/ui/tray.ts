@@ -1,6 +1,6 @@
 import { Menu, Tray, nativeImage, type MenuItemConstructorOptions, type NativeImage } from 'electron'
 import { STYLE_IDS, STYLE_LABELS, type ColorRole, type LyricsStatus, type Palette, type ShowOn, type StyleId, type TrackInfo } from '@shared/types'
-import type { IdleMinutes, Settings } from '../settings'
+import type { IdleMinutes, LyricsProvider, PlayerSource, Settings } from '../settings'
 import { swatchBitmap } from './swatch'
 
 export interface TrayModel {
@@ -12,6 +12,7 @@ export interface TrayModel {
   displays: { id: number; label: string }[]
   canLaunchAtLogin: boolean
   hotkeyOk: boolean
+  musixmatchAvailable: boolean
 }
 
 export interface TrayActions {
@@ -26,7 +27,8 @@ export interface TrayActions {
   setOffset(ms: number): void
   setWordLevel(on: boolean): void
   setIdle(minutes: IdleMinutes): void
-  setAllPlayers(on: boolean): void
+  setSource(source: PlayerSource): void
+  setLyricsProvider(provider: LyricsProvider): void
   openLyricsFolder(): void
   setLaunchAtLogin(on: boolean): void
   quit(): void
@@ -192,8 +194,27 @@ export class TrayMenu {
       {
         label: 'Players',
         submenu: [
-          radio('Spotify and Apple Music', !s.allPlayers, () => a.setAllPlayers(false)),
-          radio('All Media Apps (browsers too)', s.allPlayers, () => a.setAllPlayers(true))
+          radio('Spotify and Apple Music', s.source === 'default', () => a.setSource('default')),
+          radio('Kodama (YouTube Music)', s.source === 'kodama', () => a.setSource('kodama')),
+          radio('All Media Apps (browsers too)', s.source === 'all', () => a.setSource('all'))
+        ]
+      },
+      {
+        label: 'Lyrics Provider',
+        submenu: [
+          radio('Automatic (recommended)', s.lyricsProvider === 'auto', () => a.setLyricsProvider('auto')),
+          radio('Local Files Only', s.lyricsProvider === 'local', () => a.setLyricsProvider('local')),
+          {
+            label: m.musixmatchAvailable ? 'Musixmatch' : 'Musixmatch (API key required)',
+            type: 'radio',
+            checked: s.lyricsProvider === 'musixmatch',
+            enabled: m.musixmatchAvailable,
+            click: () => a.setLyricsProvider('musixmatch')
+          },
+          radio('Karalyr', s.lyricsProvider === 'karalyr', () => a.setLyricsProvider('karalyr')),
+          radio('Better Lyrics (syllable timing)', s.lyricsProvider === 'betterlyrics', () => a.setLyricsProvider('betterlyrics')),
+          radio('LRCLIB', s.lyricsProvider === 'lrclib', () => a.setLyricsProvider('lrclib')),
+          radio('NetEase', s.lyricsProvider === 'netease', () => a.setLyricsProvider('netease'))
         ]
       },
       { type: 'separator' },
