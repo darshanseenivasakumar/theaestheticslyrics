@@ -9,6 +9,16 @@ export type IdleMinutes = 0 | 1 | 2 | 5
 /** Which Windows media sessions to follow: the defaults, Kodama only, or everything. */
 export type PlayerSource = 'default' | 'kodama' | 'all'
 
+/** Which source may answer a lookup; `auto` keeps the built-in fallback chain. */
+export type LyricsProvider =
+  | 'auto'
+  | 'local'
+  | 'musixmatch'
+  | 'karalyr'
+  | 'betterlyrics'
+  | 'lrclib'
+  | 'netease'
+
 export interface Settings {
   version: 1
   style: StyleId
@@ -35,11 +45,22 @@ export interface Settings {
   lockOnReturn: boolean
   /** Also ask NetEase (unofficial) for real per-word timing; LRCLIB stays the fallback. */
   wordLevel: boolean
+  /** Automatic uses the whole chain; an explicit choice uses only that source. */
+  lyricsProvider: LyricsProvider
 }
 
 export const IDLE_CHOICES: readonly IdleMinutes[] = [0, 1, 2, 5]
 export const OFFSET_LIMIT_MS = 1000
 export const PLAYER_SOURCES: readonly PlayerSource[] = ['default', 'kodama', 'all']
+export const LYRICS_PROVIDERS: readonly LyricsProvider[] = [
+  'auto',
+  'local',
+  'musixmatch',
+  'karalyr',
+  'betterlyrics',
+  'lrclib',
+  'netease'
+]
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   version: 1,
@@ -55,7 +76,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   launchAtLogin: false,
   welcomed: false,
   lockOnReturn: false,
-  wordLevel: true
+  wordLevel: true,
+  lyricsProvider: 'auto'
 }) as Readonly<Settings>
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -98,7 +120,10 @@ export function sanitizeSettings(raw: unknown): Settings {
     launchAtLogin: typeof r.launchAtLogin === 'boolean' ? r.launchAtLogin : DEFAULT_SETTINGS.launchAtLogin,
     welcomed: typeof r.welcomed === 'boolean' ? r.welcomed : DEFAULT_SETTINGS.welcomed,
     lockOnReturn: typeof r.lockOnReturn === 'boolean' ? r.lockOnReturn : DEFAULT_SETTINGS.lockOnReturn,
-    wordLevel: typeof r.wordLevel === 'boolean' ? r.wordLevel : DEFAULT_SETTINGS.wordLevel
+    wordLevel: typeof r.wordLevel === 'boolean' ? r.wordLevel : DEFAULT_SETTINGS.wordLevel,
+    lyricsProvider: LYRICS_PROVIDERS.includes(r.lyricsProvider as LyricsProvider)
+      ? (r.lyricsProvider as LyricsProvider)
+      : DEFAULT_SETTINGS.lyricsProvider
   }
 }
 

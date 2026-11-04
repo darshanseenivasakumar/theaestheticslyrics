@@ -4,7 +4,9 @@ import { DEFAULT_COLORS } from '@shared/palette-defaults'
 import type { LyricsStatus, Palette, PlaybackAnchor, TimedLyrics, TrackInfo } from '@shared/types'
 import { lockWorkstation } from './lock'
 import type { Log } from './logger'
+import { BetterLyricsClient } from './lyrics/betterlyrics'
 import { LyricsCache } from './lyrics/cache'
+import { KaraLyrClient } from './lyrics/karalyr'
 import { LocalLyrics } from './lyrics/local'
 import { LrclibClient } from './lyrics/lrclib'
 import { MusixmatchProvider } from './lyrics/musixmatch'
@@ -15,7 +17,7 @@ import { MediaWatcher, type ArtworkEvent } from './media/watcher'
 import { extractPalette, paletteFromColors } from './palette/extract'
 import type { AppPaths } from './paths'
 import { PowerKeeper } from './power'
-import { SettingsStore, type Settings } from './settings'
+import { SettingsStore, type LyricsProvider, type Settings } from './settings'
 import { ColorsWindow } from './ui/colors-window'
 import { StageController } from './ui/stage-controller'
 import { TrayMenu, type TrayActions } from './ui/tray'
@@ -61,6 +63,7 @@ export class AppController {
   private lookupToken = 0
   private loginItemApplied: boolean | null = null
   private lastWordLevel = true
+  private lastLyricsProvider: LyricsProvider = 'auto'
   private readonly timers = new Set<NodeJS.Timeout>()
 
   constructor(
@@ -85,10 +88,17 @@ export class AppController {
           userAgent: `theaestheticslyrics/${app.getVersion()}`
         })
       },
+      // Free and keyless; KARALYR_API_URL/KARALYR_API_KEY overrides are read in the client.
+      karalyr: { client: new KaraLyrClient({ userAgent: `theaestheticslyrics/${app.getVersion()}` }) },
+      // Cache-first syllable timing; BETTER_LYRICS_PROXY_URL / BETTER_LYRICS_API_KEY are read
+      // in the client, so the tray provider works without any code changes.
+      betterLyrics: { client: new BetterLyricsClient({ userAgent: `theaestheticslyrics/${app.getVersion()}` }) },
       log: this.log,
-      wordLevel: { client: new NeteaseClient(), enabled: () => this.settings.get().wordLevel }
+      wordLevel: { client: new NeteaseClient(), enabled: () => this.settings.get().wordLevel },
+      provider: () => this.settings.get().lyricsProvider
     })
     this.lastWordLevel = this.settings.get().wordLevel
+    this.lastLyricsProvider = this.settings.get().lyricsProvider
     this.power = new PowerKeeper(this.log)
     this.stage = new StageController({
       log: this.log,
@@ -245,13 +255,13 @@ export class AppController {
     this.applyLoginItem(s)
     this.watcher.refreshPolicy()
     this.stage.settingsChanged()
-    if (s.wordLevel !== this.lastWordLevel) {
-      this.lastWordLevel = s.wordLevel
-      // Switching the word-timing source re-fetches the current song's lyrics.
-      if (this.track?.title) {
-        this.status = 'searching'
-        void this.lookup(this.track, ++this.lookupToken)
-      }
+    const lyricsSourceChanged = s.wordLevel !== this.lastWordLevel || s.lyricsProvider !== this.lastLyricsProvider
+    this.lastWordLevel = s.wordLevel
+    this.lastLyricsProvider = s.lyricsProvider
+    if (lyricsSourceChanged && this.track?.title) {
+      // Switching the word-timing source or the lyrics provider re-fetches the current song.
+      this.status = 'searching'
+      void this.lookup(this.track, ++this.lookupToken)
     }
     this.refresh()
   }
@@ -293,7 +303,8 @@ export class AppController {
         label: `${d.label || `Display ${i + 1}`} (${d.size.width}×${d.size.height})`
       })),
       canLaunchAtLogin: app.isPackaged,
-      hotkeyOk: this.hotkeyOk
+      hotkeyOk: this.hotkeyOk,
+      musixmatchAvailable: Boolean(MUSIXMATCH_API_KEY)
     })
   }
 
@@ -319,6 +330,7 @@ export class AppController {
       setWordLevel: (wordLevel) => this.settings.update({ wordLevel }),
       setIdle: (idleMinutes) => this.settings.update({ idleMinutes }),
       setSource: (source) => this.settings.update({ source }),
+      setLyricsProvider: (lyricsProvider) => this.settings.update({ lyricsProvider }),
       openLyricsFolder: () => {
         void this.local.ensureDir().then(() => shell.openPath(this.paths.lyricsDir))
       },

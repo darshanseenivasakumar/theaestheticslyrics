@@ -1,6 +1,6 @@
 import type { TimedLyrics, TimedWord } from '@shared/types'
 import type { ParsedLine } from './lrc'
-import { buildTimedLyrics } from './word-timing'
+import { buildTimedLyrics, flattenOverlaps } from './word-timing'
 
 /**
  * Musixmatch richsync (`/track.richsync.get`). All timestamps are Unix-style seconds kept in
@@ -61,31 +61,9 @@ export function parseRichsyncBody(body: unknown, durationMs = 0): ParsedLine[] |
   }
   if (!lines.length) return null
 
-  // Publisher drift lets a line's words overlap the next line's start. The renderer indexes
-  // the flattened words with a binary search, so walk the sorted lines and push any word
-  // that would start before the last placed word forward — timings agree within a few
-  // milliseconds when payloads overlap; nothing else about them changes.
-  lines.sort((a, b) => a.start - b.start)
-  let floor = 0
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!
-    const start = Math.max(line.start, floor)
-    if (line.words) {
-      let last = start
-      const words = line.words.map((w) => {
-        const wordStart = Math.max(w.start, last)
-        const wordEnd = Math.max(w.end, wordStart)
-        last = wordStart
-        return { text: w.text, start: wordStart, end: wordEnd }
-      })
-      lines[i] = { ...line, start, end: line.end !== undefined ? Math.max(line.end, start) : undefined, words }
-      floor = words[words.length - 1]!.start
-    } else {
-      lines[i] = { ...line, start, end: line.end !== undefined ? Math.max(line.end, start) : undefined }
-      floor = start
-    }
-  }
-  return lines
+  // Overlapping word starts would break the renderer's binary search over the flattened
+  // words; the shared pass floors each word at the last placed word's start.
+  return flattenOverlaps(lines)
 }
 
 /** Parsed richsync → the exact `TimedLyrics` the renderer styles expect (native word timing). */

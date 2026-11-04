@@ -19,6 +19,18 @@ describe('sanitizeSettings', () => {
     expect(sanitizeSettings({ wordLevel: 1 }).wordLevel).toBe(true)
   })
 
+  it('uses the automatic lyrics chain by default', () => {
+    expect(DEFAULT_SETTINGS.lyricsProvider).toBe('auto')
+    expect(sanitizeSettings({}).lyricsProvider).toBe('auto')
+  })
+
+  it('keeps a valid lyrics provider and repairs an invalid one', () => {
+    expect(sanitizeSettings({ lyricsProvider: 'karalyr' }).lyricsProvider).toBe('karalyr')
+    expect(sanitizeSettings({ lyricsProvider: 'betterlyrics' }).lyricsProvider).toBe('betterlyrics')
+    expect(sanitizeSettings({ lyricsProvider: 'spotify' }).lyricsProvider).toBe('auto')
+    expect(sanitizeSettings({ lyricsProvider: 2 }).lyricsProvider).toBe('auto')
+  })
+
   it('does not lock Windows from the lyrics screen unless asked to', () => {
     expect(DEFAULT_SETTINGS.lockOnReturn).toBe(false)
     expect(sanitizeSettings({ lockOnReturn: 'yes' }).lockOnReturn).toBe(false)
@@ -30,7 +42,8 @@ describe('sanitizeSettings', () => {
       offsetMs: 99999,
       colors: { lyric: 'red', highlight: '#00FF00' },
       idleMinutes: 3,
-      showOn: 'always'
+      showOn: 'always',
+      lyricsProvider: 'not-a-provider'
     })
     expect(s.style).toBe('ship')
     expect(s.offsetMs).toBe(1000)
@@ -39,6 +52,7 @@ describe('sanitizeSettings', () => {
     expect(s.colors.secondary).toBe(DEFAULT_SETTINGS.colors.secondary)
     expect(s.idleMinutes).toBe(2)
     expect(s.showOn).toBe('always')
+    expect(s.lyricsProvider).toBe('auto')
   })
 
   it('keeps valid values and rounds the offset', () => {
@@ -53,7 +67,8 @@ describe('sanitizeSettings', () => {
       allPlayers: true,
       launchAtLogin: true,
       welcomed: true,
-      lockOnReturn: true
+      lockOnReturn: true,
+      lyricsProvider: 'netease'
     })
     expect(s).toMatchObject({
       lockOnReturn: true,
@@ -65,7 +80,8 @@ describe('sanitizeSettings', () => {
       source: 'all',
       allPlayers: true,
       launchAtLogin: true,
-      welcomed: true
+      welcomed: true,
+      lyricsProvider: 'netease'
     })
   })
 
@@ -118,6 +134,14 @@ describe('SettingsStore', () => {
     expect(reopened.get().source).toBe('kodama')
     expect(reopened.get().allPlayers).toBe(false)
     expect(JSON.parse(readFileSync(file, 'utf8')).source).toBe('kodama')
+  })
+
+  it('persists a saved lyrics provider across restarts', () => {
+    const file = tempFile()
+    new SettingsStore(file).update({ lyricsProvider: 'karalyr' })
+    const reopened = new SettingsStore(file)
+    expect(reopened.get().lyricsProvider).toBe('karalyr')
+    expect(JSON.parse(readFileSync(file, 'utf8')).lyricsProvider).toBe('karalyr')
   })
 
   it('an old All Media Apps settings file opens as "all"', () => {
